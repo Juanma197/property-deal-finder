@@ -27,19 +27,9 @@ if uploaded_file:
     df["New Mortgage (£)"] = df["Refinance Value (£)"] * 0.75
     df["Cash Pulled Out (£)"] = (df["New Mortgage (£)"] - df["Price (£)"] * 0.75).clip(lower=0).round(2)
 
-    # Google Maps and badges
-    df["Google Maps"] = "https://www.google.com/maps/search/" + df["Address"].str.replace(" ", "+")
+    # Location & map
     df["Location"] = df["Address"].str.extract(r",\s*([^,]+)$")[0]
-
-    # ✅ New Deal Badge Logic
-    def label_deal(row):
-        if row["Undervalued"] and row["Annual ROI (%)"] >= 5 and row["Monthly Cash Flow (£)"] > 0:
-            return "✅"
-        elif row["Annual ROI (%)"] >= 10:
-            return "🔥"
-        else:
-            return "❌"
-    df["✅ Deal"] = df.apply(label_deal, axis=1)
+    df["Google Maps"] = "https://www.google.com/maps/search/" + df["Address"].str.replace(" ", "+")
 
     # Sidebar filters
     st.sidebar.header("🔍 Filter Your Deals")
@@ -47,7 +37,18 @@ if uploaded_file:
     min_roi = st.sidebar.slider("📈 Minimum ROI (%)", 0.0, 20.0, 5.0)
     min_cashflow = st.sidebar.slider("💸 Minimum Monthly Cash Flow (£)", -500, 1000, 0)
 
-    # Filtering logic
+    # ✅ Dynamic badge based on user filter
+    def label_deal(row):
+        if row["Undervalued"] and row["Annual ROI (%)"] >= min_roi and row["Monthly Cash Flow (£)"] >= min_cashflow:
+            return "✅"
+        elif row["Annual ROI (%)"] >= 10:
+            return "🔥"
+        else:
+            return "❌"
+
+    df["✅ Deal"] = df.apply(label_deal, axis=1)
+
+    # Apply filters
     filtered_df = df[
         (df["Undervalued"]) &
         (df["Annual ROI (%)"] >= min_roi) &
@@ -86,4 +87,3 @@ if uploaded_file:
         )
     else:
         st.warning("⚠️ No deals matched your filters. Try adjusting ROI or cash flow sliders.")
-
