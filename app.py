@@ -27,10 +27,19 @@ if uploaded_file:
     df["New Mortgage (£)"] = df["Refinance Value (£)"] * 0.75
     df["Cash Pulled Out (£)"] = (df["New Mortgage (£)"] - df["Price (£)"] * 0.75).clip(lower=0).round(2)
 
-    # Google Maps and badge
+    # Google Maps and badges
     df["Google Maps"] = "https://www.google.com/maps/search/" + df["Address"].str.replace(" ", "+")
-    df["🔥 Deal"] = df["Annual ROI (%)"].apply(lambda x: "🔥" if x >= 10 else ("👍" if x >= 5 else "❌"))
     df["Location"] = df["Address"].str.extract(r",\s*([^,]+)$")[0]
+
+    # ✅ New Deal Badge Logic
+    def label_deal(row):
+        if row["Undervalued"] and row["Annual ROI (%)"] >= 5 and row["Monthly Cash Flow (£)"] > 0:
+            return "✅"
+        elif row["Annual ROI (%)"] >= 10:
+            return "🔥"
+        else:
+            return "❌"
+    df["✅ Deal"] = df.apply(label_deal, axis=1)
 
     # Sidebar filters
     st.sidebar.header("🔍 Filter Your Deals")
@@ -52,10 +61,11 @@ if uploaded_file:
 
     if not filtered_df.empty:
         display_cols = [
-            "🔥 Deal", "Address", "Price (£)", "Area (m²)", "£/m2",
+            "✅ Deal", "Address", "Price (£)", "Area (m²)", "£/m2",
             "Estimated Rent (£)", "Monthly Cash Flow (£)", "Annual ROI (%)",
             "Cash Pulled Out (£)", "Google Maps"
         ]
+
         if "Deal Score" in filtered_df.columns:
             filtered_df = filtered_df.sort_values("Deal Score", ascending=False)
 
@@ -76,3 +86,4 @@ if uploaded_file:
         )
     else:
         st.warning("⚠️ No deals matched your filters. Try adjusting ROI or cash flow sliders.")
+
